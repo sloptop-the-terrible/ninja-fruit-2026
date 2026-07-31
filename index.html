@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ninja Fruit 2011</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#2a1a0e; touch-action:none; user-select:none; -webkit-user-select:none; font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+  #game { position:fixed; inset:0; display:block; cursor:crosshair; }
+  #hud { position:fixed; top:8px; left:0; right:0; display:flex; justify-content:space-between; align-items:center; padding:0 14px; pointer-events:none; z-index:5; }
+  .hud-item { color:#f5e6c8; text-shadow:2px 2px 0 #3a2410, 0 0 8px rgba(0,0,0,.8); font-weight:bold; }
+  #score { font-size:clamp(22px, 5vw, 40px); letter-spacing:1px; }
+  #combo { font-size:clamp(14px, 3vw, 22px); color:#ffd75e; opacity:0; transition:opacity .15s; }
+  #combo.show { opacity:1; }
+  #lives { font-size:clamp(18px, 4vw, 30px); letter-spacing:4px; }
+  .screen { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; text-align:center; }
+  .hidden { display:none !important; }
+  #titleScreen { background:radial-gradient(ellipse at 50% 30%, #4a2f18 0%, #241407 70%); }
+  #titleScreen h1 { font-size:clamp(44px, 12vw, 110px); color:#ffb347; text-shadow:4px 4px 0 #5a2d00, 0 0 30px rgba(255,150,50,.5); font-weight:900; letter-spacing:2px; font-style:italic; transform:rotate(-4deg); }
+  #titleScreen h1 span { color:#ffe08a; }
+  #titleScreen .sub { color:#c9a87c; font-size:clamp(14px, 3.5vw, 22px); margin-top:6px; text-shadow:1px 1px 0 #000; }
+  #titleScreen .swipe { margin-top:18px; font-size:clamp(28px, 8vw, 60px); }
+  .btn { margin-top:26px; background:linear-gradient(#ff9a3d, #d95f0e); color:#fff; border:none; border-radius:12px; padding:14px 44px; font-size:clamp(18px, 4.5vw, 26px); font-weight:bold; cursor:pointer; box-shadow:0 6px 0 #7a3a08, 0 10px 20px rgba(0,0,0,.5); text-shadow:2px 2px 0 rgba(0,0,0,.4); }
+  .btn:active { transform:translateY(4px); box-shadow:0 2px 0 #7a3a08; }
+  #gameOverScreen { background:rgba(15,8,2,.88); backdrop-filter:blur(2px); }
+  #gameOverScreen h2 { font-size:clamp(38px, 10vw, 80px); color:#ff6b4a; text-shadow:3px 3px 0 #400, 0 0 25px rgba(255,60,30,.4); font-weight:900; }
+  #finalScore { font-size:clamp(30px, 8vw, 64px); color:#ffe08a; margin-top:10px; text-shadow:3px 3px 0 #3a2410; }
+  #bestScore { font-size:clamp(16px, 4vw, 24px); color:#b98d5e; margin-top:6px; }
+  #hint { position:fixed; bottom:14px; left:0; right:0; text-align:center; color:#d9c39a; font-size:clamp(12px, 3vw, 16px); text-shadow:1px 1px 0 #000; z-index:4; pointer-events:none; opacity:.85; }
+  /* ===== dark patterns ===== */
+  .overlay { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; text-align:center; }
+  .overlay.hidden { display:none !important; }
+  #loadScreen { background:#241407; }
+  #loadTitle { font-size:clamp(20px,5vw,36px); color:#ffb347; font-weight:900; font-style:italic; text-shadow:2px 2px 0 #5a2d00; margin-bottom:18px; }
+  #loadBarWrap { width:min(70vw,360px); height:22px; background:#1a0e05; border:2px solid #5a3a1c; border-radius:6px; overflow:hidden; position:relative; }
+  #loadBar { height:100%; width:0%; background:linear-gradient(90deg,#ff9a3d,#ffd75e); transition:width .12s; }
+  #loadPct { margin-top:8px; color:#c9a87c; font-size:14px; font-weight:bold; }
+  #loadTip { margin-top:16px; color:#8a6a45; font-size:clamp(11px,3vw,13px); max-width:80vw; }
+  #adScreen { background:rgba(10,5,2,.97); }
+  #adBadge { position:absolute; top:8px; left:8px; background:#111; color:#888; font-size:11px; padding:3px 8px; border-radius:4px; }
+  #adProduct { font-size:clamp(26px,8vw,52px); font-weight:900; font-style:italic; color:#4af; text-shadow:3px 3px 0 #034, 0 0 30px rgba(60,160,255,.6); margin-bottom:6px; }
+  #adSlogan { color:#ddd; font-size:clamp(13px,4vw,18px); margin-bottom:18px; }
+  #adCTA { background:linear-gradient(#4af,#06c); color:#fff; border:none; border-radius:10px; padding:14px 40px; font-size:clamp(16px,4vw,22px); font-weight:bold; cursor:pointer; box-shadow:0 5px 0 #035, 0 8px 18px rgba(0,0,0,.6); }
+  #adSkip { margin-top:14px; color:#777; font-size:13px; cursor:pointer; text-decoration:underline; }
+  #adReviews { margin-top:16px; color:#a88; font-size:12px; max-width:80vw; }
+  #energyBar { position:fixed; top:44px; left:0; right:0; display:flex; align-items:center; gap:8px; padding:0 14px; z-index:5; pointer-events:none; }
+  #energyPips { font-size:clamp(14px,3.5vw,20px); letter-spacing:2px; color:#ffd75e; text-shadow:1px 1px 0 #000; }
+  #energyTimer { font-size:clamp(11px,2.5vw,14px); color:#c9a87c; text-shadow:1px 1px 0 #000; }
+  #offerBanner { position:fixed; top:70px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#b8860b,#ffd75e,#b8860b); color:#3a2405; font-weight:900; font-size:clamp(11px,2.8vw,15px); padding:5px 16px; border-radius:20px; z-index:6; box-shadow:0 3px 10px rgba(0,0,0,.5); white-space:nowrap; }
+  #offerBanner.hidden { display:none; }
+  #toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%); background:#fff; color:#222; font-weight:bold; font-size:clamp(12px,3vw,16px); padding:10px 18px; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,.5); z-index:60; opacity:0; transition:opacity .25s; max-width:88vw; }
+  #toast.show { opacity:1; }
+  #slotOverlay { position:fixed; inset:0; z-index:70; background:rgba(20,8,2,.6); display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+  #slotOverlay.hidden { display:none; }
+  #slotMachine { background:linear-gradient(#6b3a0e,#4a2508); border:4px solid #2a1204; border-radius:16px; padding:14px 18px 10px; box-shadow:0 10px 40px rgba(0,0,0,.7); }
+  #slotReels { display:flex; gap:8px; }
+  .reel { width:clamp(50px,16vw,80px); height:clamp(70px,22vw,110px); background:#111; border:3px solid #ffd75e; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:clamp(30px,10vw,56px); overflow:hidden; position:relative; }
+  .reel .spin { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #slotResult { margin-top:10px; font-size:clamp(16px,5vw,26px); font-weight:900; color:#ffd75e; text-shadow:2px 2px 0 #000; min-height:30px; }
+  #slotSub { font-size:clamp(11px,3vw,14px); color:#c9a87c; min-height:18px; }
+  #ratePopup { position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:#fff; color:#222; border-radius:14px; padding:16px 20px; z-index:65; box-shadow:0 8px 30px rgba(0,0,0,.6); width:min(82vw,340px); text-align:center; }
+  #ratePopup.hidden { display:none; }
+  #ratePopup h3 { font-size:15px; margin-bottom:4px; }
+  #ratePopup p { font-size:12px; color:#666; margin-bottom:10px; }
+  .stars { font-size:30px; cursor:pointer; letter-spacing:4px; }
+  #rateThanks { font-size:12px; color:#2a7; font-weight:bold; margin-top:8px; min-height:16px; }
+  #paywall { position:fixed; inset:0; z-index:80; background:rgba(8,4,2,.96); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  #paywall.hidden { display:none; }
+  #paywall h2 { font-size:clamp(22px,7vw,38px); color:#ffb347; font-weight:900; font-style:italic; }
+  #paywall .price { font-size:clamp(34px,11vw,64px); color:#fff; font-weight:900; margin:8px 0; }
+  #paywall .price s { color:#a88; font-size:60%; }
+  #paywall p { color:#c9a87c; font-size:clamp(12px,3.5vw,15px); max-width:80vw; margin-bottom:16px; }
+  #payBtn { background:linear-gradient(#3ddc6a,#1a9e44); color:#fff; border:none; border-radius:10px; padding:14px 44px; font-size:clamp(16px,4vw,22px); font-weight:bold; cursor:pointer; box-shadow:0 5px 0 #0d5a26; }
+  #payDecline { margin-top:12px; color:#a88; font-size:12px; text-decoration:underline; cursor:pointer; }
+  #spinMsg { position:fixed; top:40%; left:50%; transform:translateX(-50%); z-index:75; color:#ffd75e; font-weight:900; font-size:clamp(20px,6vw,34px); text-shadow:2px 2px 0 #000; opacity:0; pointer-events:none; }
+  /* ===== CS:GO case opening ===== */
+  #caseScreen { background:rgba(10,5,2,.97); z-index:55; }
+  #caseScreen h2 { font-size:clamp(22px,6vw,40px); color:#ffb347; font-weight:900; font-style:italic; text-shadow:2px 2px 0 #5a2d00; margin-bottom:4px; }
+  #caseCost { color:#c9a87c; font-size:clamp(11px,3vw,14px); margin-bottom:16px; }
+  #caseStripWrap { width:min(94vw,540px); overflow:hidden; border:3px solid #5a3a1c; border-radius:12px; background:#120a04; padding:8px 0; }
+  #caseStrip { display:flex; gap:8px; padding:0 8px; will-change:transform; }
+  .caseItem { min-width:88px; height:110px; border-radius:10px; border:2px solid #333; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#1a1a1a; flex-shrink:0; }
+  .caseItem .em { font-size:30px; }
+  .caseItem .nm { font-size:11px; color:#fff; font-weight:bold; margin-top:4px; max-width:84px; text-align:center; }
+  #caseResult { margin-top:14px; font-size:clamp(16px,5vw,26px); font-weight:900; min-height:30px; text-shadow:2px 2px 0 #000; }
+  #caseSub { font-size:clamp(11px,3vw,14px); color:#c9a87c; min-height:18px; margin-bottom:8px; }
+  #caseCloseBtn { margin-top:6px; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="score" class="hud-item">0</div>
+  <div id="combo" class="hud-item"></div>
+  <div id="lives" class="hud-item">❤❤❤</div>
+</div>
+<div id="hint">Swipe to slice. Don't cut the bombs.</div>
+
+<div id="titleScreen" class="screen">
+  <h1>NINJA <span>FRUIT</span></h1>
+  <div class="sub">2011 Edition • Slice responsibly</div>
+  <div class="swipe">🔪🍉</div>
+  <button class="btn" id="startBtn">SLICE</button>
+  <button class="btn" id="caseOpenBtn" style="margin-top:14px; background:linear-gradient(#7a5cff,#4a2bd6); box-shadow:0 6px 0 #2a1a7a;">🎰 OPEN CASE (1 ⚡)</button>
+</div>
+
+<div id="gameOverScreen" class="screen hidden">
+  <h2>GAME OVER</h2>
+  <div id="finalScore">0</div>
+  <div id="bestScore">Best: 0</div>
+  <button class="btn" id="retryBtn">RETRY</button>
+  <button class="btn" id="caseOpenBtn2" style="margin-top:14px; background:linear-gradient(#7a5cff,#4a2bd6); box-shadow:0 6px 0 #2a1a7a;">🎰 OPEN CASE (1 ⚡)</button>
+</div>
+
+<!-- dark patterns -->
+<div id="loadScreen" class="overlay hidden">
+  <div id="loadTitle">NINJA FRUIT 2011</div>
+  <div id="loadBarWrap"><div id="loadBar"></div></div>
+  <div id="loadPct">0%</div>
+  <div id="loadTip">Tip: Slicing fruit feels great. Keep slicing.</div>
+</div>
+
+<div id="adScreen" class="overlay hidden">
+  <div id="adBadge">AD</div>
+  <div id="adProduct">SliceMaster PRO</div>
+  <div id="adSlogan">9 out of 10 ninjas recommend it (survey of 10 ninjas, all our employees)</div>
+  <button class="btn" id="adCTA">GET IT NOW</button>
+  <div id="adSkip">Skip in 5s</div>
+  <div id="adReviews">★★★★★ "It changed my slicing forever" — definitely a real user</div>
+</div>
+
+<div id="paywall" class="hidden">
+  <h2>NO SLICES LEFT</h2>
+  <div class="price"><s>$19.99</s> $9.99/mo</div>
+  <p>Go PRO for unlimited slices, no ads, and DOUBLE POINTS. Cancel anytime (you can't).</p>
+  <button class="btn" id="payBtn" style="background:linear-gradient(#3ddc6a,#1a9e44); box-shadow:0 6px 0 #0d5a26;">GO PRO</button>
+  <div id="payDecline">No thanks, I love waiting</div>
+</div>
+
+<div id="slotOverlay" class="hidden">
+  <div id="slotMachine">
+    <div id="slotReels">
+      <div class="reel"><div class="spin" id="reel0">🍉</div></div>
+      <div class="reel"><div class="spin" id="reel1">🍉</div></div>
+      <div class="reel"><div class="spin" id="reel2">🍉</div></div>
+    </div>
+    <div id="slotResult"></div>
+    <div id="slotSub"></div>
+  </div>
+</div>
+
+<div id="ratePopup" class="hidden">
+  <h3>Enjoying Ninja Fruit 2011?</h3>
+  <p>Your rating helps us rank #1 (it doesn't, but please)</p>
+  <div class="stars" id="stars">★ ★ ★ ★ ★</div>
+  <div id="rateThanks"></div>
+</div>
+
+<div id="offerBanner" class="hidden">🔥 LIMITED TIME: DOUBLE POINTS WITH PRO 🔥</div>
+<div id="toast"></div>
+<div id="energyBar">
+  <div id="energyPips"></div>
+  <div id="energyTimer"></div>
+</div>
+
+<div id="caseScreen" class="overlay hidden">
+  <h2 style="font-size:clamp(22px,6vw,40px); color:#ffb347; font-weight:900; font-style:italic; text-shadow:2px 2px 0 #5a2d00; margin-bottom:4px;">CASE OPENING</h2>
+  <div id="caseCost" style="color:#c9a87c; font-size:clamp(11px,3vw,14px); margin-bottom:16px;">Costs 1 ⚡. No duplicates (we promise).</div>
+  <div id="caseStripWrap"><div id="caseStrip"></div></div>
+  <div id="caseResult" style="margin-top:14px; font-size:clamp(16px,5vw,26px); font-weight:900; min-height:30px; text-shadow:2px 2px 0 #000;"></div>
+  <div id="caseSub" style="font-size:clamp(11px,3vw,14px); color:#c9a87c; min-height:18px;"></div>
+  <button class="btn" id="caseCloseBtn">CLOSE</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var W = 0, H = 0;
+
+  // ---------- resize ----------
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * devicePixelRatio;
+    canvas.height = H * devicePixelRatio;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---------- state ----------
+  var state = "title"; // title | playing | over
+  var score = 0, lives = 3, best = 0;
+  try { best = parseInt(localStorage.getItem("ninjafruit_best") || "0", 10) || 0; } catch(e){}
+  var fruitArr = [], slashArr = [], particles = [], popups = [], halves = [];
+  var comboCount = 0, comboTimer = 0, lastSlice = null;
+  var spawnTimer = 0, difficulty = 1, elapsed = 0;
+  var shake = 0, flash = 0;
+
+  var scoreEl = document.getElementById("score");
+  var livesEl = document.getElementById("lives");
+  var comboEl = document.getElementById("combo");
+  var finalScoreEl = document.getElementById("finalScore");
+  var bestScoreEl = document.getElementById("bestScore");
+
+  // ---------- fruit types ----------
+  var FRUITS = [
+    { name:"watermelon", r:44, color:"#3fa34d", inner:"#f05656", seed:"#222", points:1, w:0.9 },
+    { name:"apple", r:32, color:"#e23b3b", inner:"#fbe8d3", seed:"#7a4a21", points:1, w:1.0 },
+    { name:"orange", r:30, color:"#f7a12b", inner:"#ffe9c4", seed:"#e57e1f", points:1, w:1.0 },
+    { name:"banana", r:26, color:"#ffd93b", inner:"#fff3c4", seed:"#c9a227", points:1, w:1.1 },
+    { name:"pineapple", r:34, color:"#e8b13c", inner:"#fff2b8", seed:"#8a6d1f", points:1, w:1.05 },
+    { name:"kiwi", r:24, color:"#7a9b3e", inner:"#cfe8a8", seed:"#3c4a1c", points:1, w:1.1 }
+  ];
+
+  // ---------- audio (tiny synth, no files) ----------
+  var actx = null;
+  function audio(){
+    if(!actx){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} }
+    return actx;
+  }
+  function beep(freq, dur, type, vol, slide){
+    var a = audio(); if(!a) return;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.value = freq;
+    if(slide) o.frequency.exponentialRampToValueAtTime(slide, a.currentTime + dur);
+    g.gain.setValueAtTime(vol || 0.12, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination);
+    o.start(); o.stop(a.currentTime + dur);
+  }
+  var sfx = {
+    whoosh: function(){ beep(300, 0.12, "sawtooth", 0.06, 900); },
+    slice:  function(){ beep(520, 0.1, "square", 0.12, 900); beep(880, 0.08, "square", 0.08, 1400); },
+    bomb:   function(){ beep(160, 0.5, "sawtooth", 0.25, 40); beep(90, 0.7, "square", 0.2, 30); },
+    combo:  function(){ beep(660, 0.09, "square", 0.1); setTimeout(function(){ beep(880, 0.09, "square", 0.1); }, 70); setTimeout(function(){ beep(1100, 0.12, "square", 0.1); }, 140); },
+    gameover: function(){ beep(400, 0.3, "sawtooth", 0.15, 200); setTimeout(function(){ beep(250, 0.5, "sawtooth", 0.15, 80); }, 250); },
+    reel:   function(){ beep(900, 0.03, "square", 0.05, 500 + Math.random()*400); },
+    coin:   function(){ beep(1500, 0.06, "square", 0.1, 2000); setTimeout(function(){ beep(1900, 0.08, "square", 0.08, 2400); }, 60); },
+    jackpot: function(){ beep(523, 0.1, "square", 0.1); setTimeout(function(){ beep(659, 0.1, "square", 0.1); }, 90); setTimeout(function(){ beep(784, 0.1, "square", 0.1); }, 180); setTimeout(function(){ beep(1047, 0.25, "square", 0.12); }, 270); },
+    chaChing: function(){ beep(1200, 0.05, "square", 0.08, 1800); setTimeout(function(){ beep(2200, 0.1, "square", 0.08, 2600); }, 50); },
+    ding:   function(){ beep(880, 0.08, "sine", 0.08, 1320); }
+  };
+
+  // ---------- fruit spawn ----------
+  function spawnFruit(){
+    var t = FRUITS[Math.floor(Math.random() * FRUITS.length)];
+    var fskin = equippedSkin("fruit");
+    var outer = t.color, inner = t.inner;
+    if(fskin && fskin.palette){
+      var idx = FRUITS.indexOf(t);
+      outer = fskin.palette[idx][0];
+      inner = fskin.palette[idx][1];
+    }
+    var x = 60 + Math.random() * (W - 120);
+    var vx = (Math.random() - 0.5) * 160 * difficulty;
+    var vy = -(620 + Math.random() * 260) * (0.85 + difficulty * 0.12);
+    fruitArr.push({
+      type: t, x: x, y: H + 60, vx: vx, vy: vy,
+      rot: (Math.random() - 0.5) * 0.6, vr: (Math.random() - 0.5) * 8,
+      r: t.r * (0.85 + Math.random() * 0.3), sliced: false, life: 0,
+      outer: outer, inner: inner
+    });
+  }
+  function spawnBomb(){
+    var x = 80 + Math.random() * (W - 160);
+    var bskin = equippedSkin("bomb");
+    fruitArr.push({
+      bomb: true, x: x, y: H + 60, vx: (Math.random() - 0.5) * 140,
+      vy: -(560 + Math.random() * 240) * (0.85 + difficulty * 0.1),
+      rot: 0, vr: (Math.random() - 0.5) * 10, r: 30, sliced: false, life: 0,
+      body: bskin ? bskin.body : "#1a1a1a", crown: bskin ? bskin.crown : "#d4af37"
+    });
+  }
+
+  // ---------- slicing ----------
+  var pointerDown = false, lastP = null, pendingSlice = null, gestureCount = 0;
+
+  function checkSlice(seg){
+    var slicedAny = false;
+    for(var i = fruitArr.length - 1; i >= 0; i--){
+      var f = fruitArr[i];
+      if(f.sliced) continue;
+      var t = closestOnSegment(f.x, f.y, seg.x1, seg.y1, seg.x2, seg.y2);
+      if(t < f.r + 8){
+        if(f.bomb){ explodeBomb(f); }
+        else { sliceFruit(f, seg); slicedAny = true; gestureCount++; }
+      }
+    }
+    return slicedAny;
+  }
+
+  canvas.addEventListener("pointerdown", function(e){
+    audio();
+    pointerDown = true; lastP = { x: e.clientX, y: e.clientY };
+    pendingSlice = null; gestureCount = 0;
+  });
+  canvas.addEventListener("pointermove", function(e){
+    if(!pointerDown) return;
+    var p = { x: e.clientX, y: e.clientY };
+    if(lastP){
+      var dx = p.x - lastP.x, dy = p.y - lastP.y;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist > 6){
+        var seg = { x1: lastP.x, y1: lastP.y, x2: p.x, y2: p.y, t: 1 };
+        slashArr.push(seg);
+        pendingSlice = seg;
+        checkSlice(seg);
+        if(dist > 18) sfx.whoosh();
+      }
+    }
+    lastP = p;
+  });
+  function pointerUp(){
+    if(pointerDown){
+      if(pendingSlice) checkSlice(pendingSlice);
+      if(gestureCount > 0){
+        comboCount++;
+        comboTimer = 1.2;
+        if(comboCount >= 2){ sfx.combo(); }
+        var px = lastP ? lastP.x : W/2, py = lastP ? lastP.y : H/2;
+        addPopup(px, py, comboCount >= 2 ? ("COMBO x" + comboCount) : "+" + gestureCount);
+        maybeSlotSpin();
+      }
+    }
+    pointerDown = false; lastP = null; pendingSlice = null; gestureCount = 0;
+  }
+  canvas.addEventListener("pointerup", pointerUp);
+  canvas.addEventListener("pointercancel", pointerUp);
+  canvas.addEventListener("pointerleave", pointerUp);
+
+  function closestOnSegment(px, py, x1, y1, x2, y2){
+    var dx = x2 - x1, dy = y2 - y1;
+    var len2 = dx*dx + dy*dy;
+    if(len2 === 0) return Math.sqrt((px-x1)*(px-x1) + (py-y1)*(py-y1));
+    var t = ((px-x1)*dx + (py-y1)*dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    var cx = x1 + t*dx, cy = y1 + t*dy;
+    return Math.sqrt((px-cx)*(px-cx) + (py-cy)*(py-cy));
+  }
+
+  function sliceFruit(f, s){
+    f.sliced = true;
+    var pts = f.type.points * (comboCount >= 2 ? comboCount : 1);
+    score += pts;
+    updateHud();
+    sfx.slice();
+    var ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    halves.push({
+      color: f.inner, skin: f.outer, x: f.x, y: f.y,
+      vx: f.vx + Math.cos(ang) * 120 + (Math.random()-0.5)*80,
+      vy: f.vy - 60 + (Math.random()-0.5)*120,
+      vr: 4 + Math.random() * 7, rot: ang + 1.2, life: 1, r: f.r
+    });
+    halves.push({
+      color: f.inner, skin: f.outer, x: f.x, y: f.y,
+      vx: f.vx - Math.cos(ang) * 120 + (Math.random()-0.5)*80,
+      vy: f.vy - 60 + (Math.random()-0.5)*120,
+      vr: -4 - Math.random() * 7, rot: ang - 1.2, life: 1, r: f.r
+    });
+    for(var i = 0; i < 14; i++){
+      var a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 260;
+      particles.push({ x: f.x, y: f.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 60, life: 0.7, max: 0.7, color: f.inner, r: 2 + Math.random()*4 });
+    }
+    addPopup(f.x, f.y - f.r, "+" + pts);
+  }
+
+  function explodeBomb(f){
+    f.sliced = true;
+    lives--; updateHud(); shake = 20; flash = 1; comboCount = 0; comboTimer = 0;
+    sfx.bomb();
+    for(var i = 0; i < 40; i++){
+      var a = Math.random() * Math.PI * 2, sp = 150 + Math.random() * 400;
+      particles.push({ x: f.x, y: f.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.8, max: 0.8, color: ["#ff6a00","#ffd000","#222","#555"][i%4], r: 2 + Math.random()*5 });
+    }
+    addPopup(f.x, f.y - f.r, "-1 LIFE");
+    if(lives <= 0) gameOver();
+  }
+
+  function addPopup(x, y, text){
+    popups.push({ x: x, y: y, text: text, life: 0.9, max: 0.9 });
+  }
+
+  // ---------- HUD ----------
+  function updateHud(){
+    scoreEl.textContent = score;
+    var h = "";
+    for(var i = 0; i < 3; i++) h += i < lives ? "❤" : "🖤";
+    livesEl.textContent = h;
+    if(comboTimer > 0 && comboCount >= 2){
+      comboEl.textContent = "x" + comboCount;
+      comboEl.classList.add("show");
+    } else {
+      comboEl.classList.remove("show");
+    }
+  }
+
+  // ---------- dark patterns ----------
+  var energy = 3, energyMax = 3, energyTimer = 0, energyRefillSec = 45;
+  var loadDone = false, loadPct = 0;
+  var adSkipTimer = 0;
+  var slotBusy = false;
+  var offerTimer = 0, toastTimer = 0, rateShown = false, gamesPlayed = 0;
+  var fakePlayers = ["Shiki", "Ezio", "Tobi", "Master", "a bot in Ohio"];
+
+  var loadScreen = document.getElementById("loadScreen");
+  var loadBar = document.getElementById("loadBar");
+  var loadPctEl = document.getElementById("loadPct");
+  var adScreen = document.getElementById("adScreen");
+  var adSkipEl = document.getElementById("adSkip");
+  var paywall = document.getElementById("paywall");
+  var payBtn = document.getElementById("payBtn");
+  var payDecline = document.getElementById("payDecline");
+  var slotOverlay = document.getElementById("slotOverlay");
+  var slotResult = document.getElementById("slotResult");
+  var slotSub = document.getElementById("slotSub");
+  var ratePopup = document.getElementById("ratePopup");
+  var rateThanks = document.getElementById("rateThanks");
+  var offerBanner = document.getElementById("offerBanner");
+  var toastEl = document.getElementById("toast");
+  var energyPips = document.getElementById("energyPips");
+  var energyTimerEl = document.getElementById("energyTimer");
+
+  function updateEnergyHud(){
+    var pips = "";
+    for(var i = 0; i < energyMax; i++) pips += i < energy ? "⚡" : "🪫";
+    energyPips.textContent = pips;
+    energyTimerEl.textContent = energy < energyMax ? (Math.ceil(energyTimer) + "s") : "";
+  }
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function(){ toastEl.classList.remove("show"); }, 2600);
+  }
+
+  function showToastRandom(){
+    var msgs = [
+      "⚠️ " + fakePlayers[Math.floor(Math.random()*fakePlayers.length)] + " is slicing 40% faster than you",
+      "⏳ Your combo streak is about to expire",
+      "💎 PRO users earn 2x points",
+      "🔥 Shiki just beat your high score",
+      "📈 3,000 ninjas are slicing RIGHT NOW",
+      "🎁 Claim your FREE daily fruit!"
+    ];
+    toast(msgs[Math.floor(Math.random()*msgs.length)]);
+  }
+
+  function maybeShowOffer(){
+    if(state !== "playing") return;
+    offerBanner.classList.remove("hidden");
+    setTimeout(function(){ offerBanner.classList.add("hidden"); }, 3500);
+    offerTimer = 18 + Math.random() * 14;
+  }
+
+  function maybeRatePopup(){
+    if(rateShown) return;
+    rateShown = true;
+    rateThanks.textContent = "";
+    ratePopup.classList.remove("hidden");
+  }
+  var starEls = document.getElementById("stars").children;
+  function bindStars(){
+    for(var i = 0; i < starEls.length; i++){
+      (function(idx, el){
+        el.addEventListener("click", function(){
+          rateThanks.textContent = "Thanks! Your 5-star review is being processed...";
+          sfx.chaChing();
+          setTimeout(function(){
+            rateThanks.textContent = "Review submitted (nowhere).";
+            setTimeout(function(){ ratePopup.classList.add("hidden"); }, 1500);
+          }, 800);
+        });
+      })(i, starEls[i]);
+    }
+  }
+  bindStars();
+
+  // fake loading screen
+  function fakeLoad(cb){
+    loadDone = false; loadPct = 0;
+    loadScreen.classList.remove("hidden");
+    loadBar.style.width = "0%";
+    loadPctEl.textContent = "0%";
+    var iv = setInterval(function(){
+      if(loadDone){ clearInterval(iv); return; }
+      loadPct += 3 + Math.random() * 9;
+      if(loadPct >= 99){
+        loadPct = 99;
+        loadPctEl.textContent = "99%";
+        loadBar.style.width = "99%";
+        sfx.ding();
+        // stall at 99 like a real mobile game
+        setTimeout(function(){
+          loadDone = true;
+          loadPct = 100;
+          loadPctEl.textContent = "100%";
+          loadBar.style.width = "100%";
+          setTimeout(function(){
+            loadScreen.classList.add("hidden");
+            cb();
+          }, 350);
+        }, 900 + Math.random() * 1200);
+        clearInterval(iv);
+        return;
+      }
+      loadPctEl.textContent = Math.floor(loadPct) + "%";
+      loadBar.style.width = Math.floor(loadPct) + "%";
+    }, 90);
+  }
+
+  // interstitial ad
+  function showAd(cb){
+    adScreen.classList.remove("hidden");
+    adSkipTimer = 5;
+    adSkipEl.textContent = "Skip in 5s";
+    sfx.chaChing();
+    var iv = setInterval(function(){
+      adSkipTimer--;
+      if(adSkipTimer <= 0){
+        clearInterval(iv);
+        adScreen.classList.add("hidden");
+        cb();
+      } else {
+        adSkipEl.textContent = "Skip in " + adSkipTimer + "s";
+      }
+    }, 1000);
+  }
+  document.getElementById("adCTA").addEventListener("click", function(){
+    toast("Downloading SliceMaster PRO... just kidding. Keep slicing.");
+    adSkipTimer = 1;
+  });
+  document.getElementById("adSkip").addEventListener("click", function(){ adSkipTimer = 1; });
+
+  // paywall
+  function showPaywall(){
+    state = "paywall";
+    paywall.classList.remove("hidden");
+    sfx.gameover();
+  }
+  payBtn.addEventListener("click", function(){
+    var n = 0;
+    var iv = setInterval(function(){
+      n++;
+      payBtn.textContent = ["Processing...", "Contacting bank...", "Verifying card...", "Declined. Retrying...", "Declined again. Please use another card."][n % 5];
+      sfx.reel();
+      if(n >= 12){
+        clearInterval(iv);
+        payBtn.textContent = "GO PRO";
+        toast("Payment declined. Enjoy the wait.");
+      }
+    }, 400);
+  });
+  payDecline.addEventListener("click", function(){
+    paywall.classList.add("hidden");
+    toast("Fine. One free slice. This time.");
+    energy = Math.max(1, energy + 1);
+    energyTimer = energyRefillSec;
+    updateEnergyHud();
+    tryStart();
+  });
+
+  // slot machine on combo multiples of 3
+  var SLOT_ICONS = ["🍉", "🍎", "🍊", "🍌", "🍍", "🥝"];
+  function maybeSlotSpin(){
+    if(slotBusy || comboCount < 3 || comboCount % 3 !== 0) return;
+    slotBusy = true;
+    slotOverlay.classList.remove("hidden");
+    slotResult.textContent = "";
+    slotSub.textContent = "COMBO x" + comboCount + " triggers BONUS SPIN";
+    var reels = [document.getElementById("reel0"), document.getElementById("reel1"), document.getElementById("reel2")];
+    var results = [];
+    for(var i = 0; i < 3; i++){
+      results.push(SLOT_ICONS[Math.floor(Math.random()*SLOT_ICONS.length)]);
+    }
+    var spinIv = setInterval(function(){
+      for(var i = 0; i < 3; i++) reels[i].textContent = SLOT_ICONS[Math.floor(Math.random()*SLOT_ICONS.length)];
+      sfx.reel();
+    }, 90);
+    setTimeout(function(){
+      clearInterval(spinIv);
+      var t = 0;
+      var stopIv = setInterval(function(){
+        reels[t].textContent = results[t];
+        sfx.coin();
+        t++;
+        if(t >= 3){
+          clearInterval(stopIv);
+          var jackpot = (results[0] === results[1] && results[1] === results[2]);
+          if(jackpot){
+            var bonus = 50;
+            score += bonus;
+            updateHud();
+            slotResult.textContent = "JACKPOT! +" + bonus;
+            slotSub.textContent = "You win. This never happens. Congratulations.";
+            sfx.jackpot();
+          } else {
+            slotResult.textContent = "NO MATCH";
+            slotSub.textContent = "So close! Buy 10 more slices for better odds.";
+            sfx.gameover();
+          }
+          setTimeout(function(){
+            slotOverlay.classList.add("hidden");
+            slotBusy = false;
+          }, 2200);
+        }
+      }, 500);
+    }, 1400);
+  }
+
+  // energy refill + ad on game over
+  function consumeEnergy(){
+    if(energy > 0) energy--;
+    energyTimer = energyRefillSec;
+    updateEnergyHud();
+  }
+
+  // ---------- CS:GO case opening (skins) ----------
+  var RARITY_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Gold"];
+  var RARITY_COLORS = ["#b0b0b0", "#5e98d9", "#4b69ff", "#8847ff", "#d32ce6", "#eb4b4b", "#ffd700"];
+  var SKIN_CATS = ["bg", "fruit", "knife", "bomb"];
+  var SKINS = {
+    bg: [
+      { id:"bg_classic", name:"Classic Dojo", rarity:0, colors:["#5b3a1c","#3a2410"] },
+      { id:"bg_midnight", name:"Midnight Temple", rarity:1, colors:["#15152a","#0a0a18"] },
+      { id:"bg_neon", name:"Neon Alley", rarity:2, colors:["#2b1055","#140628"] },
+      { id:"bg_inferno", name:"Inferno", rarity:3, colors:["#3d0f05","#1f0603"] },
+      { id:"bg_royal", name:"Royal Crimson", rarity:4, colors:["#4a0a1a","#200408"] },
+      { id:"bg_gold", name:"Golden Throne", rarity:5, colors:["#3d2f05","#1a1302"] },
+      { id:"bg_void", name:"Void", rarity:6, colors:["#0a0a0a","#000000"] }
+    ],
+    fruit: [
+      { id:"fr_classic", name:"Harvest Classic", rarity:0, palette:null },
+      { id:"fr_candy", name:"Candy Pop", rarity:2, palette:[["#ff6ec7","#ffd1ec"],["#ff6ec7","#ffd1ec"],["#ff9a3d","#ffe0b3"],["#ffd93b","#fff3c4"],["#b3ff4d","#eaffc9"],["#7a9b3e","#d9f0a8"]] },
+      { id:"fr_golden", name:"Golden Harvest", rarity:3, palette:[["#e6b800","#fff3b0"],["#e6b800","#fff3b0"],["#e6b800","#fff3b0"],["#e6b800","#fff3b0"],["#e6b800","#fff3b0"],["#e6b800","#fff3b0"]] },
+      { id:"fr_blood", name:"Blood Moon", rarity:4, palette:[["#8b0000","#ff6b6b"],["#8b0000","#ff6b6b"],["#8b0000","#ff6b6b"],["#8b0000","#ff6b6b"],["#8b0000","#ff6b6b"],["#8b0000","#ff6b6b"]] },
+      { id:"fr_ice", name:"Arctic Chill", rarity:5, palette:[["#7fd8ff","#e0f7ff"],["#7fd8ff","#e0f7ff"],["#7fd8ff","#e0f7ff"],["#7fd8ff","#e0f7ff"],["#7fd8ff","#e0f7ff"],["#7fd8ff","#e0f7ff"]] },
+      { id:"fr_void", name:"Void Fruit", rarity:6, palette:[["#2b2b3d","#8a8ab5"],["#2b2b3d","#8a8ab5"],["#2b2b3d","#8a8ab5"],["#2b2b3d","#8a8ab5"],["#2b2b3d","#8a8ab5"],["#2b2b3d","#8a8ab5"]] }
+    ],
+    knife: [
+      { id:"kn_classic", name:"Standard Blade", rarity:0, colors:["#ffffff","#c8f0ff","#ffffff"] },
+      { id:"kn_crimson", name:"Crimson Web", rarity:3, colors:["#ff5252","#b71c1c","#ff8a80"] },
+      { id:"kn_fade", name:"Karambit Fade", rarity:4, colors:["#ff9ad5","#c084fc","#ffd75e"] },
+      { id:"kn_gamma", name:"Gamma Emerald", rarity:4, colors:["#66ff66","#00e676","#b9f6ca"] },
+      { id:"kn_doppler", name:"M9 Doppler", rarity:5, colors:["#4fc3f7","#7e57c2","#26c6da"] },
+      { id:"kn_gold", name:"Gold Toaster", rarity:6, colors:["#ffd700","#ffb300","#fff59d"] }
+    ],
+    bomb: [
+      { id:"bm_classic", name:"Royal Guard", rarity:0, body:"#1a1a1a", crown:"#d4af37" },
+      { id:"bm_toxic", name:"Toxic Blast", rarity:2, body:"#1c2b1a", crown:"#39ff14" },
+      { id:"bm_inferno", name:"Inferno Core", rarity:3, body:"#2a0e08", crown:"#ff5a00" },
+      { id:"bm_sapphire", name:"Sapphire Crown", rarity:4, body:"#0a1228", crown:"#4895ef" },
+      { id:"bm_crimson", name:"Crimson Reign", rarity:5, body:"#2a0408", crown:"#ff1744" },
+      { id:"bm_void", name:"Void Monarch", rarity:6, body:"#000000", crown:"#b388ff" }
+    ]
+  };
+  var ALL_SKINS = [];
+  for(var skCat in SKINS){
+    for(var si = 0; si < SKINS[skCat].length; si++){
+      SKINS[skCat][si].cat = skCat;
+      ALL_SKINS.push(SKINS[skCat][si]);
+    }
+  }
+  var skinsState = { unlocked: ["bg_classic","fr_classic","kn_classic","bm_classic"], equipped: { bg:"bg_classic", fruit:"fr_classic", knife:"kn_classic", bomb:"bm_classic" } };
+  try {
+    var savedSkins = JSON.parse(localStorage.getItem("ninjafruit_cases") || "null");
+    if(savedSkins && savedSkins.unlocked) skinsState = savedSkins;
+  } catch(e){}
+  function saveSkins(){ try { localStorage.setItem("ninjafruit_cases", JSON.stringify(skinsState)); } catch(e){} }
+  function findSkin(id){ for(var i=0;i<ALL_SKINS.length;i++) if(ALL_SKINS[i].id===id) return ALL_SKINS[i]; return null; }
+  function equippedSkin(cat){ return findSkin(skinsState.equipped[cat]); }
+  function isUnlocked(id){ return skinsState.unlocked.indexOf(id) >= 0; }
+  function unlockableSkins(){ var out=[]; for(var i=0;i<ALL_SKINS.length;i++) if(!isUnlocked(ALL_SKINS[i].id)) out.push(ALL_SKINS[i]); return out; }
+  function skinEmoji(skin){
+    if(skin.cat==="bg") return "🎨";
+    if(skin.cat==="fruit") return "🍉";
+    if(skin.cat==="knife") return "🔪";
+    return "💣";
+  }
+  function skinInfo(skin){
+    var txt = "";
+    if(skin.cat==="bg") txt = "Background";
+    if(skin.cat==="fruit") txt = "Fruit palette";
+    if(skin.cat==="knife") txt = "Blade trail";
+    if(skin.cat==="bomb") txt = "Royal ordnance";
+    return txt;
+  }
+  var caseScreen = document.getElementById("caseScreen");
+  var caseStrip = document.getElementById("caseStrip");
+  var caseResultEl = document.getElementById("caseResult");
+  var caseSubEl = document.getElementById("caseSub");
+  var caseAnim = null, caseSpinning = false;
+
+  function renderCaseStrip(items){
+    caseStrip.innerHTML = "";
+    for(var i = 0; i < items.length; i++){
+      var d = document.createElement("div");
+      d.className = "caseItem";
+      d.style.borderColor = RARITY_COLORS[items[i].rarity];
+      d.innerHTML = '<div class="em">' + skinEmoji(items[i]) + '</div><div class="nm">' + items[i].name + '</div>';
+      caseStrip.appendChild(d);
+    }
+  }
+
+  function openCaseScreen(){
+    caseScreen.classList.remove("hidden");
+    caseResultEl.textContent = "";
+    caseSubEl.textContent = "Tap the strip to spin. No refunds.";
+    var preview = [];
+    for(var i = 0; i < 12; i++) preview.push(ALL_SKINS[Math.floor(Math.random()*ALL_SKINS.length)]);
+    renderCaseStrip(preview);
+    caseStrip.style.transition = "none";
+    caseStrip.style.transform = "translateX(0px)";
+  }
+
+  function spinCase(){
+    if(caseSpinning) return;
+    var pool = unlockableSkins();
+    if(pool.length === 0){
+      caseResultEl.textContent = "ALL SKINS COLLECTED";
+      caseSubEl.textContent = "You own the casino now. Congrats.";
+      sfx.jackpot();
+      return;
+    }
+    if(energy <= 0){
+      caseScreen.classList.add("hidden");
+      showPaywall();
+      return;
+    }
+    energy--; energyTimer = energyRefillSec; updateEnergyHud();
+    var target = pool[Math.floor(Math.random()*pool.length)];
+    var TARGET_INDEX = 20;
+    var items = [];
+    for(var i = 0; i < 28; i++) items.push(ALL_SKINS[Math.floor(Math.random()*ALL_SKINS.length)]);
+    items[TARGET_INDEX] = target;
+    renderCaseStrip(items);
+    var itemW = caseStrip.children[0].offsetWidth + 8;
+    var wrapW = caseStrip.parentElement.clientWidth;
+    var dist = TARGET_INDEX * itemW - (wrapW - itemW) / 2;
+    caseSpinning = true;
+    caseResultEl.textContent = "";
+    caseSubEl.textContent = "Spinning...";
+    caseStrip.style.transition = "none";
+    caseStrip.style.transform = "translateX(0px)";
+    void caseStrip.offsetWidth;
+    caseStrip.style.transition = "transform 3.4s cubic-bezier(0.05, 0.7, 0.1, 1)";
+    caseStrip.style.transform = "translateX(" + (-dist) + "px)";
+    sfx.reel();
+    var reelIv = setInterval(function(){ sfx.reel(); }, 110);
+    caseAnim = setTimeout(function(){
+      clearInterval(reelIv);
+      caseSpinning = false;
+      caseAnim = null;
+      skinsState.unlocked.push(target.id);
+      skinsState.equipped[target.cat] = target.id;
+      saveSkins();
+      caseResultEl.textContent = target.name;
+      caseResultEl.style.color = RARITY_COLORS[target.rarity];
+      caseSubEl.innerHTML = RARITY_NAMES[target.rarity] + " · " + skinInfo(target) + " · EQUIPPED";
+      if(target.rarity >= 5) sfx.jackpot(); else sfx.chaChing();
+      toast("Equipped: " + target.name);
+    }, 3600);
+  }
+  document.getElementById("caseCloseBtn").addEventListener("click", function(){
+    if(caseAnim){ clearTimeout(caseAnim); caseAnim = null; caseSpinning = false; }
+    caseScreen.classList.add("hidden");
+  });
+  caseStrip.addEventListener("click", spinCase);
+  document.getElementById("caseOpenBtn").addEventListener("click", openCaseScreen);
+  document.getElementById("caseOpenBtn2").addEventListener("click", openCaseScreen);
+  // draw a small equipped-skin badge on title
+  function skinBadge(){
+    var b = "";
+    for(var i = 0; i < SKIN_CATS.length; i++){
+      var s = equippedSkin(SKIN_CATS[i]);
+      if(s) b += skinEmoji(s) + " ";
+    }
+    return b.trim();
+  }
+
+  // ---------- game flow ----------
+  function realStart(){
+    score = 0; lives = 3; difficulty = 1; elapsed = 0;
+    fruitArr = []; slashArr = []; particles = []; popups = []; halves = [];
+    comboCount = 0; comboTimer = 0; spawnTimer = 0;
+    state = "playing";
+    gamesPlayed++;
+    consumeEnergy();
+    offerTimer = 12; toastTimer = 8;
+    updateHud();
+    document.getElementById("titleScreen").classList.add("hidden");
+    document.getElementById("gameOverScreen").classList.add("hidden");
+    adScreen.classList.add("hidden");
+    paywall.classList.add("hidden");
+  }
+
+  function tryStart(){
+    if(state === "paywall"){
+      realStart();
+      return;
+    }
+    if(energy <= 0){
+      showPaywall();
+      return;
+    }
+    fakeLoad(realStart);
+  }
+
+  function gameOver(){
+    state = "over";
+    sfx.gameover();
+    if(score > best){
+      best = score;
+      try { localStorage.setItem("ninjafruit_best", String(best)); } catch(e){}
+    }
+    finalScoreEl.textContent = score;
+    bestScoreEl.textContent = "Best: " + best;
+    showAd(function(){
+      document.getElementById("gameOverScreen").classList.remove("hidden");
+      if(!rateShown && Math.random() < 0.6) maybeRatePopup();
+    });
+  }
+
+  document.getElementById("startBtn").addEventListener("click", tryStart);
+  document.getElementById("retryBtn").addEventListener("click", tryStart);
+
+  // ---------- update ----------
+  function update(dt){
+    elapsed += dt;
+    difficulty = 1 + elapsed / 25; // ramps over time
+    spawnTimer -= dt;
+    var bombChance = Math.min(0.16, 0.05 + elapsed / 120);
+    if(spawnTimer <= 0){
+      var n = Math.random() < (0.25 + Math.min(0.4, elapsed / 60)) ? 2 : 1;
+      for(var i = 0; i < n; i++){
+        if(Math.random() < bombChance) spawnBomb(); else spawnFruit();
+      }
+      spawnTimer = Math.max(0.45, 1.05 - elapsed / 90) * (0.8 + Math.random() * 0.4);
+    }
+    if(comboTimer > 0){ comboTimer -= dt; if(comboTimer <= 0) comboCount = 0; updateHud(); }
+
+    // dark pattern timers
+    if(state === "playing"){
+      if(energy < energyMax){
+        energyTimer -= dt;
+        if(energyTimer <= 0){
+          energy++;
+          energyTimer = energyRefillSec;
+          updateEnergyHud();
+          sfx.ding();
+          toast("+1 slice refilled! Keep playing.");
+        }
+        updateEnergyHud();
+      }
+      offerTimer -= dt;
+      if(offerTimer <= 0) maybeShowOffer();
+      toastTimer -= dt;
+      if(toastTimer <= 0){
+        toastTimer = 12 + Math.random() * 10;
+        showToastRandom();
+      }
+    }
+
+    for(var i = fruitArr.length - 1; i >= 0; i--){
+      var f = fruitArr[i];
+      f.life += dt;
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.vy += 900 * dt; // gravity
+      f.vx *= (1 - 0.3 * dt);
+      f.rot += f.vr * dt;
+      if(f.y > H + 120) fruitArr.splice(i, 1);
+    }
+    for(var i = slashArr.length - 1; i >= 0; i--){
+      slashArr[i].t -= dt * 3;
+      if(slashArr[i].t <= 0) slashArr.splice(i, 1);
+    }
+    for(var i = halves.length - 1; i >= 0; i--){
+      var h = halves[i];
+      h.x += h.vx * dt; h.y += h.vy * dt; h.vy += 900 * dt; h.rot += h.vr * dt; h.life -= dt;
+      if(h.life <= 0) halves.splice(i, 1);
+    }
+    for(var i = particles.length - 1; i >= 0; i--){
+      var p = particles[i];
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt;
+      if(p.life <= 0) particles.splice(i, 1);
+    }
+    for(var i = popups.length - 1; i >= 0; i--){
+      popups[i].y -= 50 * dt; popups[i].life -= dt;
+      if(popups[i].life <= 0) popups.splice(i, 1);
+    }
+    if(shake > 0) shake -= dt * 40;
+    if(flash > 0) flash -= dt * 2;
+  }
+
+  // ---------- draw ----------
+  function drawWood(){
+    var bskin = equippedSkin("bg");
+    var c0 = bskin ? bskin.colors[0] : "#5b3a1c";
+    var c1 = bskin ? bskin.colors[1] : "#3a2410";
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, c0); g.addColorStop(1, c1);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(0,0,0,0.12)"; ctx.lineWidth = 2;
+    for(var i = 0; i < 40; i++){
+      var y = Math.random() * H;
+      ctx.beginPath(); ctx.moveTo(0, y);
+      ctx.bezierCurveTo(W*0.3, y + (Math.random()-0.5)*40, W*0.7, y + (Math.random()-0.5)*40, W, y + (Math.random()-0.5)*20);
+      ctx.stroke();
+    }
+  }
+
+  function drawFruit(f){
+    ctx.save();
+    ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+    if(f.bomb){
+      ctx.fillStyle = f.body;
+      ctx.beginPath(); ctx.arc(0, 0, f.r, 0, Math.PI*2); ctx.fill();
+      // king face (Mohammed VI, Morocco is a kingdom)
+      var s = f.r / 30;
+      ctx.save(); ctx.scale(s, s);
+      // face base
+      ctx.fillStyle = "#c68e5f";
+      ctx.beginPath(); ctx.arc(0, 2, 22, 0, Math.PI*2); ctx.fill();
+      // beard
+      ctx.fillStyle = "#2a1a10";
+      ctx.beginPath(); ctx.ellipse(0, 12, 17, 12, 0, 0, Math.PI*2); ctx.fill();
+      // mustache
+      ctx.fillStyle = "#2a1a10";
+      ctx.beginPath(); ctx.ellipse(-6, 4, 7, 4, 0.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(6, 4, 7, 4, -0.2, 0, Math.PI*2); ctx.fill();
+      // receding hairline sides
+      ctx.fillStyle = "#3a2a1a";
+      ctx.beginPath(); ctx.arc(-14, -8, 7, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(14, -8, 7, 0, Math.PI*2); ctx.fill();
+      // glasses
+      ctx.strokeStyle = "#111"; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(-8, -4, 6, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(8, -4, 6, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2, -4); ctx.lineTo(2, -4); ctx.stroke();
+      // eyes
+      ctx.fillStyle = "#111";
+      ctx.beginPath(); ctx.arc(-8, -4, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, -4, 2, 0, Math.PI*2); ctx.fill();
+      // eyebrows
+      ctx.strokeStyle = "#2a1a10"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-13, -10); ctx.lineTo(-3, -8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(3, -8); ctx.lineTo(13, -10); ctx.stroke();
+      // crown
+      ctx.fillStyle = f.crown;
+      ctx.beginPath(); ctx.moveTo(-14, -14); ctx.lineTo(-14, -24); ctx.lineTo(-8, -19); ctx.lineTo(-2, -26); ctx.lineTo(4, -19); ctx.lineTo(10, -24); ctx.lineTo(14, -14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#c0392b";
+      ctx.beginPath(); ctx.arc(-2, -22, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#2e86c1";
+      ctx.beginPath(); ctx.arc(6, -20, 2, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      // fuse
+      ctx.strokeStyle = "#8a5a20"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, -f.r + 4); ctx.quadraticCurveTo(8, -f.r - 8, 2, -f.r - 18); ctx.stroke();
+      // spark
+      var sp = Math.sin(performance.now() / 40) * 2;
+      ctx.fillStyle = "#ffe066";
+      ctx.beginPath(); ctx.arc(2, -f.r - 18 + sp, 4, 0, Math.PI*2); ctx.fill();
+    } else {
+      var t = f.type;
+      ctx.fillStyle = f.outer;
+      ctx.beginPath(); ctx.arc(0, 0, f.r, 0, Math.PI*2); ctx.fill();
+      // highlight
+      ctx.fillStyle = "rgba(255,255,255,0.25)";
+      ctx.beginPath(); ctx.arc(-f.r*0.3, -f.r*0.35, f.r*0.35, 0, Math.PI*2); ctx.fill();
+      // stem
+      ctx.strokeStyle = "#5a3a12"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, -f.r*0.8); ctx.quadraticCurveTo(4, -f.r - 6, -2, -f.r - 10); ctx.stroke();
+      // stripe for watermelon / leaf for pineapple
+      if(t.name === "watermelon"){
+        ctx.strokeStyle = "rgba(0,60,0,0.35)"; ctx.lineWidth = 3;
+        for(var a = -0.9; a <= 0.9; a += 0.45){
+          ctx.beginPath(); ctx.moveTo(Math.cos(a)*f.r*0.6, Math.sin(a)*f.r*0.6);
+          ctx.lineTo(Math.cos(a)*f.r, Math.sin(a)*f.r); ctx.stroke();
+        }
+      }
+      if(t.name === "pineapple"){
+        ctx.fillStyle = "#3f8f3a";
+        for(var a = -1.2; a <= 1.2; a += 0.5){
+          ctx.beginPath();
+          ctx.moveTo(0, -f.r); ctx.lineTo(6, -f.r - 12); ctx.lineTo(-6, -f.r - 12);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawHalf(h){
+    ctx.save();
+    ctx.translate(h.x, h.y); ctx.rotate(h.rot);
+    ctx.fillStyle = h.skin;
+    ctx.beginPath(); ctx.arc(0, 0, h.r * h.life, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = h.color;
+    ctx.beginPath(); ctx.arc(0, h.r * 0.2, h.r * 0.75 * h.life, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSlash(s){
+    var kskin = equippedSkin("knife");
+    var c1 = kskin ? kskin.colors[0] : "#ffffff";
+    var c2 = kskin ? kskin.colors[1] : "#c8f0ff";
+    var c3 = kskin ? kskin.colors[2] : "#ffffff";
+    var w = 6 + s.t * 8;
+    var g = ctx.createLinearGradient(s.x1, s.y1, s.x2, s.y2);
+    g.addColorStop(0, c1);
+    g.addColorStop(0.5, c2);
+    g.addColorStop(1, c3);
+    ctx.strokeStyle = g; ctx.lineWidth = w; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+    ctx.strokeStyle = "rgba(120,200,255," + (0.4 * s.t) + ")"; ctx.lineWidth = w * 1.8;
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+  }
+
+  function draw(dt){
+    ctx.save();
+    if(shake > 0) ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+    drawWood();
+    for(var i = 0; i < halves.length; i++) drawHalf(halves[i]);
+    for(var i = 0; i < fruitArr.length; i++) if(!fruitArr[i].sliced) drawFruit(fruitArr[i]);
+    for(var i = 0; i < slashArr.length; i++) drawSlash(slashArr[i]);
+    for(var i = 0; i < particles.length; i++){
+      var p = particles[i];
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for(var i = 0; i < popups.length; i++){
+      var pp = popups[i];
+      ctx.globalAlpha = Math.max(0, pp.life / pp.max);
+      ctx.fillStyle = pp.text.indexOf("COMBO") >= 0 ? "#ffd75e" : (pp.text.indexOf("LIFE") >= 0 ? "#ff6a4a" : "#ffffff");
+      ctx.font = "bold " + (pp.text.indexOf("COMBO") >= 0 ? 26 : 20) + "px 'Segoe UI', sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "rgba(0,0,0,0.7)"; ctx.lineWidth = 4;
+      ctx.strokeText(pp.text, pp.x, pp.y);
+      ctx.fillText(pp.text, pp.x, pp.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    if(flash > 0){
+      ctx.fillStyle = "rgba(255,120,40," + Math.max(0, flash) * 0.35 + ")";
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  // ---------- loop ----------
+  updateEnergyHud();
+  var last = performance.now();
+  function loop(now){
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if(state === "playing"){ update(dt); }
+    draw(dt);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
